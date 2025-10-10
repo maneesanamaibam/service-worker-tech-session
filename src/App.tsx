@@ -7,7 +7,7 @@ async function exampleAPI(): Promise<Cat> {
 
     const res = await fetch(url);
     const cats = await res.json();
-    const randNumber = Math.round(Math.random() * 9);
+    const randNumber = Math.round(Math.random());
     const randCatId = cats[randNumber].id;
 
     const url2 = `https://api.thecatapi.com/v1/images/${randCatId}`;
