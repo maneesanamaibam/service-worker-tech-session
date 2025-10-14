@@ -110,22 +110,22 @@ function SWLifeCycleDiagram() {
   return <>
     <div className="w-full border-2 border-emerald-600 mb-[50px]">
       <p className="text-xl font-3 text-orange-500 p-3">Service Worker Architecture</p>
-      <img src="/sw_lifecycle.svg" />
+      <img src={`${import.meta.env.BASE_URL}sw_lifecycle.svg`} />
     </div>
     <a className="p-2 mb-[20px] text-blue-400" href="https://developer.chrome.com/docs/workbox/caching-strategies-overview" target="_blank"> Chrome - Caching Strategies</a>
     <div className="w-full border-2 border-emerald-600 mt-[10px] mb-[50px]">
       <p className="text-xl font-3 text-orange-500 p-3">Cache First</p>
-      <img src="/sw_cache_first.png" />
+      <img src={`${import.meta.env.BASE_URL}sw_cache_first.png`} />
     </div>
     <div className="w-full border-2 border-emerald-600 mb-[50px]">
 
       <p className="text-xl font-3 text-orange-500 p-3">Network First</p>
-      <img src="/sw_network_first.png" />
+      <img src={`${import.meta.env.BASE_URL}sw_network_first.png`} />
     </div>
     <div className="w-full border-2 border-emerald-600 mb-[50px]">
 
       <p className="text-xl font-3 text-orange-500 p-3">Stale While Revalidate</p>
-      <img src="/sw_stale_while_revalidate.png" />
+      <img src={`${import.meta.env.BASE_URL}/sw_stale_while_revalidate.png`} />
     </div>
 
   </>
