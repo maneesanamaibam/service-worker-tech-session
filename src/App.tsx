@@ -1,4 +1,4 @@
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import "./App.css";
 
 async function exampleAPI(): Promise<Cat> {
@@ -32,6 +32,52 @@ async function exampleAPI(): Promise<Cat> {
     return {} as Cat;
   }
 }
+
+function NotificationMessage({ onClose, message = 'Message sent successfully', visible, duration = 4000 }: { message?: string, visible: boolean, onClose: () => void }) {
+  const timerRef = useRef<any>(null)
+  const animationRef = useRef<any>(null)
+  const [timerMsg, setTimerMsg] = useState<string>('');
+  useEffect(() => {
+
+    const timer = (timestamp: number): void => {
+      if (timerRef.current == null) {
+        timerRef.current = timestamp
+      }
+      const startTime = timerRef.current
+      const elapsed = timestamp - startTime
+      const timerSeconds = Math.round((duration - elapsed) / 1000)
+      setTimerMsg(`${timerSeconds} secs`)
+
+      console.log('Elapsed time: ', timerRef.current)
+      if (elapsed < duration) {
+        animationRef.current = requestAnimationFrame(timer)
+      } else {
+        onClose()
+      }
+    }
+    animationRef.current = requestAnimationFrame(timer)
+
+    return () => {
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+    }
+
+  }, [visible])
+
+
+  if (!visible) return <></>
+  return <>
+
+
+    <div id="toast-simple" className="flex items-center w-full max-w-xs p-4 space-x-4 rtl:space-x-reverse text-gray-500 bg-white divide-x rtl:divide-x-reverse divide-gray-200 rounded-lg shadow-sm dark:text-gray-400 dark:divide-gray-700 dark:bg-gray-800 fixed top-0 left-1/2 -translate-x-1/2" role="alert">
+      <svg className="w-5 h-5 text-blue-600 dark:text-blue-500 rotate-45" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 18 20">
+        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 17 8 2L9 1 1 19l8-2Zm0 0V9" />
+      </svg>
+      <div className="ps-4 text-sm font-normal">{message} {timerMsg}</div>
+    </div>
+
+  </>
+}
+
 
 function SkeletonLoader() {
   return (
@@ -137,7 +183,7 @@ function App() {
     showSWLifecycle: false
   })
   const [catData, setCatData] = useState({} as Cat);
-
+  const [notificationVisible, setNotificationVisible] = useState<boolean>(true)
 
   /// NEVER DO THIS: This is for demo purpose
   const hitNonExistentAPI = async () => {
@@ -159,13 +205,17 @@ function App() {
       setCatData(data);
     });
   };
+
+  const notificationOnClose = () => {
+    setNotificationVisible(false)
+  }
   useEffect(() => {
     fetchCatData();
   }, []);
 
   return (
     <>
-      <div className="w-[1000px] ml-auto mr-auto pt-[30px]">
+      <div className="w-[1000px] ml-auto mr-auto pt-[30px] ">
 
         <h3 className="text-3xl text-teal-600 text-center my-[10px] font-bold">Service Worker </h3>
 
@@ -209,7 +259,7 @@ function App() {
           {isPending ? <SkeletonLoader /> : <CatCard cat={catData} />}
         </div>
         }
-
+        <NotificationMessage visible={notificationVisible} onClose={notificationOnClose} />
 
 
       </div>
