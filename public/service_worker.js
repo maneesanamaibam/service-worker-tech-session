@@ -1,18 +1,20 @@
-
 const CAT_CACHE = 'cat_v1'
-const JS_CACHE = 'js_v1'
+const COMMON_CACHE = 'common_v1'
 const urlCaches = [
-  '/',
-  '/index.html',
-  '/index.css',
-  '/sw_demo_bundle.js',
-
+  '/service-worker-tech-session',
+  // '/index.html',
+  '/service-worker-tech-session/index.css',
+  '/service-worker-tech-session/sw_demo_bundle.js',
+  '/service-worker-tech-session/sw_cache_first.png',
+  '/service-worker-tech-session/sw_lifecycle.svg',
+  '/service-worker-tech-session/sw_network_first.png'
 ]
 const urlB64ToUint8Array = base64String => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
   const rawData = atob(base64)
   const outputArray = new Uint8Array(rawData.length)
+
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i)
   }
@@ -71,7 +73,7 @@ self.addEventListener('install', (event) => {
   console.log('Installing service worker')
   // Add to cache 
   event.waitUntil(
-    caches.open(JS_CACHE).then(cache => {
+    caches.open(COMMON_CACHE).then(cache => {
       cache.addAll(urlCaches)
     })
 
@@ -107,7 +109,7 @@ self.addEventListener('activate', async event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(cacheNames.map(cache => {
-        if (cache !== JS_CACHE) {
+        if (cache !== COMMON_CACHE) {
           console.log('Deleted older cache: ', cache)
           return caches.delete(cache)
         }
@@ -124,8 +126,6 @@ self.addEventListener('fetch', event => {
 
   if (event.request.method !== 'GET') return;
 
-
-
   if (event.request.destination === 'image') {
     return;
   }
@@ -136,7 +136,7 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request).then(netRes => {
         const resCloned = netRes.clone();
-        caches.open(JS_CACHE).then(cache => {
+        caches.open(COMMON_CACHE).then(cache => {
           cache.put(event.request, resCloned)
         })
         return netRes
@@ -147,9 +147,6 @@ self.addEventListener('fetch', event => {
     )
     return;
   }
-
-
-
 
   // NON EXISTENT API
   const nonExistentAPI = 'https://example.com/api/v2/unknown'
@@ -166,39 +163,38 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  const catUrlToCache = 'https://api.thecatapi.com/v1/images'
-  if (event.request.method === 'GET' && event.request.url.includes(catUrlToCache)) {
-    console.log('Matched the Cat URL inside Service Worker')
-    event.respondWith(
-      caches.match(event.request).then(cachedResponse => {
-        if (cachedResponse) return cachedResponse
-
-
-        return fetch(event.request).then(networkResponse => {
-          const clonedRes = networkResponse.clone();
-
-          caches.open(CAT_CACHE).then(cache => {
-            cache.put(event.request, clonedRes)
-            console.log('Successfully added cats data to cache')
-          })
-          return networkResponse
-
-        }).catch((err) => {
-          console.error('Service Worker Fetch error: ', cachedResponse)
-          return cachedResponse
-        })
-
-
-      })
-    )
-    return;
-  }
+  // const catUrlToCache = 'https://api.thecatapi.com/v1/images'
+  // if (event.request.method === 'GET' && event.request.url.includes(catUrlToCache)) {
+  //   console.log('Matched the Cat URL inside Service Worker')
+  //   event.respondWith(
+  //     caches.match(event.request).then(cachedResponse => {
+  //       if (cachedResponse) return cachedResponse
+  //
+  //
+  //       return fetch(event.request).then(networkResponse => {
+  //         const clonedRes = networkResponse.clone();
+  //
+  //         caches.open(CAT_CACHE).then(cache => {
+  //           cache.put(event.request, clonedRes)
+  //           console.log('Successfully added cats data to cache')
+  //         })
+  //         return networkResponse
+  //
+  //       }).catch((err) => {
+  //         console.error('Service Worker Fetch error: ', cachedResponse)
+  //         return cachedResponse
+  //       })
+  //
+  //
+  //     })
+  //   )
+  //   return;
+  // }
   // Other cases 
+
   const oURL = new URL(event.request.url)
   console.log('Other Case URL: ', oURL)
   event.respondWith(fetch(event.request).then(res => res).catch(err => console.log('Error Other Cases last section: ', err)))
-
-
 })
 
 
@@ -209,9 +205,7 @@ self.addEventListener('push', (event) => {
     console.log('Push Event data : ', pushedData)
     showLocalNotification(pushedData.title, pushedData.message)
   }
-
 }
 )
-
 
 self.skipWaiting();

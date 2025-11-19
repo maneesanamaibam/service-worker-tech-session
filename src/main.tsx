@@ -19,7 +19,7 @@ async function requestNotificationPermission() {
 
 async function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    const swRegistration = await navigator.serviceWorker
+    await navigator.serviceWorker
       .register(`${import.meta.env.BASE_URL}service_worker.js`)
     // .then((reg) => console.log("Service worker registration succesful", reg))
     // .catch((err) => console.error("Registration failed: ", err));

@@ -1,3 +1,13 @@
+//
+// =======================================
+// Public Key:
+// BD6swrkl62_5QxOotuAnyJAvhNPYjmz57FNUvyX_Z79UM8govtGJFCtD-HonDgeMBjOTQg1dZoHACXvQgKj92Vs
+//
+// Private Key:
+// v5DgmaQ50xuSyhpRNiBY6BWwtPS7u25oPQj4TMJSJRw
+//
+// =======================================
+
 const express = require("express")
 const cors = require("cors")
 const bodyParser = require("body-parser")
@@ -9,11 +19,8 @@ const webpush = require("web-push")
 
 const VAPID_KEYS = {
   publicKey: 'BD6swrkl62_5QxOotuAnyJAvhNPYjmz57FNUvyX_Z79UM8govtGJFCtD-HonDgeMBjOTQg1dZoHACXvQgKj92Vs',
-  privateKey: ''
+  privateKey: 'v5DgmaQ50xuSyhpRNiBY6BWwtPS7u25oPQj4TMJSJRw'
 }
-app.use(cors())
-app.use(bodyParser.json())
-
 const PORT = 4500;
 const DUMMY_DB_FILE_PATH = './saved_subscription_dummy_db.json'
 
@@ -34,8 +41,6 @@ const getSubscriptionAndSendNotificationFromDummyDb = async (notifyMsgObj) => {
 }
 
 
-// configuring webpush before sending notification
-webpush.setVapidDetails('mailto:mmaneesanasingh@covalience.com', VAPID_KEYS.publicKey, VAPID_KEYS.privateKey)
 
 function sendNotification(subscription, notificationMessageObj = {
   title: 'Payment Notification',
@@ -66,54 +71,52 @@ const saveSubscriptionToDummyDB = async (subscription) => {
 
 }
 
-app.get("/", (req, res) => {
-  res.send('Test')
-  saveSubscriptionToDummyDB()
-})
-
-app.post('/save-subscription', async (req, res) => {
-  const subscription = req.body;
-  const result = await saveSubscriptionToDummyDB(subscription)
-
-  if (result) {
-
-    res.statusCode = 200
-
-    res.json({ status: 'success', message: 'Subscription saved sucessfully' })
-  } else {
-    res.statusCode = 400
-    res.json({ status: 'error' })
-  }
-
-})
-
-app.post('/send-notification', async (req, res) => {
-  let notificationObj = {}
-
-  if (typeof req.body === 'object' && Object.keys(req.body).length > 0) {
-    notificationObj = req.body;
-  }
-
-  const subscription = await getSubscriptionAndSendNotificationFromDummyDb(notificationObj)
-  res.json({ message: 'Successfully pushed the message' })
-})
-
-
-app.listen(PORT, () => {
-  console.log(`Backend sever started listening on port: ${PORT}!`)
-})
-
-
-
-
-
-
-
 
 
 
 function main() {
-  console.log('Push Service API main function log');
+  app.use(cors())
+  app.use(bodyParser.json())
+  // configuring webpush before sending notification
+  webpush.setVapidDetails('mailto:mmaneesanasingh@covalience.com', VAPID_KEYS.publicKey, VAPID_KEYS.privateKey)
+
+  app.get("/", (req, res) => {
+    res.send('Test')
+    saveSubscriptionToDummyDB()
+  })
+
+  app.post('/save-subscription', async (req, res) => {
+    const subscription = req.body;
+    const result = await saveSubscriptionToDummyDB(subscription)
+
+    if (result) {
+
+      res.statusCode = 200
+
+      res.json({ status: 'success', message: 'Subscription saved sucessfully' })
+    } else {
+      res.statusCode = 400
+      res.json({ status: 'error' })
+    }
+
+  })
+
+  app.post('/send-notification', async (req, res) => {
+    let notificationObj = {}
+
+    if (typeof req.body === 'object' && Object.keys(req.body).length > 0) {
+      notificationObj = req.body;
+    }
+
+    const subscription = await getSubscriptionAndSendNotificationFromDummyDb(notificationObj)
+    res.json({ message: 'Successfully pushed the message' })
+  })
+
+
+  app.listen(PORT, () => {
+    console.log(`Backend sever started listening on port: ${PORT}!`)
+  })
+
 }
 
 

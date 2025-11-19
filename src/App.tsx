@@ -33,7 +33,7 @@ async function exampleAPI(): Promise<Cat> {
   }
 }
 
-function NotificationMessage({ onClose, message = 'Message sent successfully', visible, duration = 4000 }: { message?: string, visible: boolean, onClose: () => void }) {
+function NotificationMessage({ onClose, message = 'Message sent successfully', visible, duration = 4000 }: { duration?: number, message?: string, visible: boolean, onClose: () => void }) {
   const timerRef = useRef<any>(null)
   const animationRef = useRef<any>(null)
   const [timerMsg, setTimerMsg] = useState<string>('');
@@ -176,20 +176,23 @@ function SWLifeCycleDiagram() {
 
   </>
 }
+
 function App() {
   const [isPending, startTransition] = useTransition();
   const [UIStates, setUIStates] = useState({
     showExampleAPIDemo: false,
-    showSWLifecycle: false
+    showSWLifecycle: false,
+    showNonExistentAPI: false
   })
   const [catData, setCatData] = useState({} as Cat);
-  const [notificationVisible, setNotificationVisible] = useState<boolean>(true)
-
+  const [nonExistentAPIResponse, setNonExistentAPIResponse] = useState({ message: '' })
   /// NEVER DO THIS: This is for demo purpose
   const hitNonExistentAPI = async () => {
     const url = 'https://example.com/api/v2/unknown'
     const res = await fetch(url)
     const json = await res.json()
+    setUIStates(prev => ({ ...prev, showNonExistentAPI: true }))
+    setNonExistentAPIResponse(json)
     console.log('NON Existent API Response: ', json)
   }
   const setUIToggles = (type: string) => {
@@ -207,7 +210,7 @@ function App() {
   };
 
   const notificationOnClose = () => {
-    setNotificationVisible(false)
+    setUIStates(prev => ({ ...prev, showNonExistentAPI: false }))
   }
   useEffect(() => {
     fetchCatData();
@@ -243,7 +246,8 @@ function App() {
 
         </div>
         {/* SW LIFE CYCLE */}
-        {UIStates.showSWLifecycle && <SWLifeCycleDiagram />
+        {
+          UIStates.showSWLifecycle && <SWLifeCycleDiagram />
         }
 
 
@@ -259,9 +263,10 @@ function App() {
           {isPending ? <SkeletonLoader /> : <CatCard cat={catData} />}
         </div>
         }
-        <NotificationMessage visible={notificationVisible} onClose={notificationOnClose} />
-
-
+        {/* NON EXISTENT API */}
+        {UIStates.showNonExistentAPI &&
+          <NotificationMessage message={nonExistentAPIResponse.message} visible={UIStates.showNonExistentAPI} onClose={notificationOnClose} />
+        }
       </div>
     </>
   );
