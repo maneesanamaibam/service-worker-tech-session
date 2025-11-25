@@ -1,14 +1,165 @@
 const CAT_CACHE = 'cat_v1'
 const COMMON_CACHE = 'common_v1'
+
 const urlCaches = [
-  '/service-worker-tech-session',
-  // '/index.html',
-  '/service-worker-tech-session/index.css',
+  '/',
+  '/index.html',
+
   '/service-worker-tech-session/sw_demo_bundle.js',
+
+]
+
+const urlImageCaches = [
   '/service-worker-tech-session/sw_cache_first.png',
-  '/service-worker-tech-session/sw_lifecycle.svg',
+  // '/service-worker-tech-session/sw_lifecycle.svg',
   '/service-worker-tech-session/sw_network_first.png'
 ]
+
+// CASE 1: install 
+self.addEventListener('install', (event) => {
+  console.log('Installing service worker')
+  // Add to cache 
+  event.waitUntil(
+    caches.open(COMMON_CACHE).then(cache => {
+      cache.addAll(urlCaches)
+      cache.addAll(urlImageCaches)
+    }).catch(err => {
+      console.log('INSTALL_error: ', err)
+    })
+
+  )
+})
+// CASE 2: ACTIVATE
+self.addEventListener('activate', async event => {
+  console.log('Activate: ')
+  // subsribe to push events 
+  subscribeToPushEvents()
+  // Deleting old version of cache
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(cacheNames.map(cache => {
+        if (cache !== COMMON_CACHE) {
+          console.log('Deleted older cache: ', cache)
+          return caches.delete(cache)
+        }
+      }))
+
+    })
+  )
+
+  // Start controlling open pages immediately
+  return self.clients.claim()
+})
+
+// CASE 3: FETCH EVENT
+self.addEventListener('fetch', event => {
+
+  if (event.request.method !== 'GET') return;
+
+  const isReqDesImage = event.request.destination === 'image'
+  const url = new URL(event.request.url)
+
+  if (isReqDesImage && urlImageCaches.includes(url.pathname)) {
+    event.respondWith(
+      fetch(event.request).then(res => {
+        const resCloned = res.clone();
+        caches.open(COMMON_CACHE).then(cache => {
+          cache.put(event.request, resCloned)
+        })
+        return res
+      }).catch(error => {
+        console.error('Image Fallback Cache error: ', error)
+        return caches.match(event.request);
+      })
+    )
+    return;
+  } else if (isReqDesImage) {
+    event.respondWith(fetch(event.request))
+    return;
+  }
+  /// Static Assets - JS/HTML/CSS -> Offline Experience
+  // Network first -> First check it on the network and then on the cache 
+
+  if (event.request.destination === 'document' || event.request.destination === 'script' || event.request.destination === 'style') {
+    event.respondWith(
+      fetch(event.request).then(netRes => {
+        const resCloned = netRes.clone();
+        caches.open(COMMON_CACHE).then(cache => {
+          cache.put(event.request, resCloned)
+        })
+        return netRes
+      }).catch((err) => {
+        console.error('NETWORK FIRST error Catch:', err)
+        return caches.match(event.request)
+      })
+    )
+    return;
+  }
+
+  // NON EXISTENT API
+  const nonExistentAPI = 'https://example.com/api/v2/unknown'
+  if (event.request.url === nonExistentAPI && event.request.method === 'GET') {
+    console.log('Inside SW non Existent block')
+    event.respondWith(
+      new Response(JSON.stringify({
+        message: 'This is dummy API response you get as you are calling a non exist API '
+      }), {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200
+      })
+    )
+    return;
+  }
+
+  const catUrlToCache = 'https://api.thecatapi.com/v1/images'
+  if (event.request.method === 'GET' && event.request.url.includes(catUrlToCache)) {
+    console.log('Matched the Cat URL inside Service Worker')
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) return cachedResponse
+
+
+        return fetch(event.request).then(networkResponse => {
+          const clonedRes = networkResponse.clone();
+
+          caches.open(CAT_CACHE).then(cache => {
+            cache.put(event.request, clonedRes)
+            console.log('Successfully added cats data to cache')
+          })
+          return networkResponse
+
+        }).catch((err) => {
+          console.error('Service Worker Fetch error: ', cachedResponse)
+          return cachedResponse
+        })
+
+
+      })
+    )
+    return;
+  }
+  // Other cases 
+
+  const oURL = new URL(event.request.url)
+  console.log('Other Case URL: ', oURL)
+  event.respondWith(fetch(event.request).then(res => res).catch(err => console.log('Error Other Cases last section: ', err)))
+})
+
+self.addEventListener('push', (event) => {
+  console.log('Push Event ! Received')
+  if (event.data) {
+    const pushedData = event.data.json();
+    console.log('Push Event data : ', pushedData)
+    showLocalNotification(pushedData.title, pushedData.message)
+  }
+}
+)
+
+self.skipWaiting();
+
+
+
+
 const urlB64ToUint8Array = base64String => {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
@@ -68,19 +219,6 @@ async function saveSubscriptionToBackend(subscription) {
   return response.json();
 }
 
-
-self.addEventListener('install', (event) => {
-  console.log('Installing service worker')
-  // Add to cache 
-  event.waitUntil(
-    caches.open(COMMON_CACHE).then(cache => {
-      cache.addAll(urlCaches)
-    })
-
-  )
-})
-
-
 async function subscribeToPushEvents() {
   try {
 
@@ -101,111 +239,4 @@ async function subscribeToPushEvents() {
   }
 }
 
-self.addEventListener('activate', async event => {
-  console.log('Activate: ')
-  // subsribe to push events 
-  subscribeToPushEvents()
-  // Deleting old version of cache
-  event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(cacheNames.map(cache => {
-        if (cache !== COMMON_CACHE) {
-          console.log('Deleted older cache: ', cache)
-          return caches.delete(cache)
-        }
-      }))
 
-    })
-  )
-
-  // Start controlling open pages immediately
-  return self.clients.claim()
-})
-
-self.addEventListener('fetch', event => {
-
-  if (event.request.method !== 'GET') return;
-
-  if (event.request.destination === 'image') {
-    return;
-  }
-  /// Static Assets - JS/HTML/CSS -> Offline Experience
-  // Network first -> First check it on the network and then on the cache 
-
-  if (event.request.destination === 'document' || event.request.destination === 'script' || event.request.destination === 'style') {
-    event.respondWith(
-      fetch(event.request).then(netRes => {
-        const resCloned = netRes.clone();
-        caches.open(COMMON_CACHE).then(cache => {
-          cache.put(event.request, resCloned)
-        })
-        return netRes
-      }).catch((err) => {
-        console.error('NETWORK FIRST error Catch:', err)
-        return caches.match(event.request)
-      })
-    )
-    return;
-  }
-
-  // NON EXISTENT API
-  const nonExistentAPI = 'https://example.com/api/v2/unknown'
-  if (event.request.url === nonExistentAPI && event.request.method === 'GET') {
-    console.log('Inside SW non Existent block')
-    event.respondWith(
-      new Response(JSON.stringify({
-        message: 'This is dummy API response you get as you are calling a non exist API '
-      }), {
-        headers: { 'Content-Type': 'application/json' },
-        status: 200
-      })
-    )
-    return;
-  }
-
-  // const catUrlToCache = 'https://api.thecatapi.com/v1/images'
-  // if (event.request.method === 'GET' && event.request.url.includes(catUrlToCache)) {
-  //   console.log('Matched the Cat URL inside Service Worker')
-  //   event.respondWith(
-  //     caches.match(event.request).then(cachedResponse => {
-  //       if (cachedResponse) return cachedResponse
-  //
-  //
-  //       return fetch(event.request).then(networkResponse => {
-  //         const clonedRes = networkResponse.clone();
-  //
-  //         caches.open(CAT_CACHE).then(cache => {
-  //           cache.put(event.request, clonedRes)
-  //           console.log('Successfully added cats data to cache')
-  //         })
-  //         return networkResponse
-  //
-  //       }).catch((err) => {
-  //         console.error('Service Worker Fetch error: ', cachedResponse)
-  //         return cachedResponse
-  //       })
-  //
-  //
-  //     })
-  //   )
-  //   return;
-  // }
-  // Other cases 
-
-  const oURL = new URL(event.request.url)
-  console.log('Other Case URL: ', oURL)
-  event.respondWith(fetch(event.request).then(res => res).catch(err => console.log('Error Other Cases last section: ', err)))
-})
-
-
-self.addEventListener('push', (event) => {
-  console.log('Push Event ! Received')
-  if (event.data) {
-    const pushedData = event.data.json();
-    console.log('Push Event data : ', pushedData)
-    showLocalNotification(pushedData.title, pushedData.message)
-  }
-}
-)
-
-self.skipWaiting();

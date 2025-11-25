@@ -113,6 +113,10 @@ function main() {
   })
 
 
+  app.get('/test-API-data', async (req, res) => {
+    res.json({ status: 200, data: { msg: ' Call foo baz function' } })
+  })
+
   app.listen(PORT, () => {
     console.log(`Backend sever started listening on port: ${PORT}!`)
   })
